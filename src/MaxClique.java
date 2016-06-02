@@ -13,7 +13,7 @@ public class MaxClique {
 	public static int MAXDEGREE = 0;
 	public static final int alpha = 3;
 	public static final int beta = 2;
-	public static final double rou = 0.95;
+	public static final double rou = 0.97;
 	public static final double MAX_PHEROMONE = 4;
 	public static final double MIN_PHEROMONE = 0.01;
 	public static final int Q = 100;
@@ -175,7 +175,10 @@ public class MaxClique {
 //			}
 			///////////Next-generation///////////////////
 		} while (time < MAXTIME);
+		System.out.println("Antcount = " + ANTCOUNT + " MAXTIME = " + MAXTIME);
 		System.out.println("alpha = " + alpha + ", beta = " + beta + ", rou = " + rou);
+		System.out.println("MAX_Pheromone = " + MAX_PHEROMONE + " , MIN_Pheromone = " + MIN_PHEROMONE);
+		System.out.println("Q = " + Q + " q0 = " + q0);
 		System.out.println("找到的最大团应包含点的个数为： " + CBest.size());
 		System.out.print("包括如下点： ");
 		int count = 0;
