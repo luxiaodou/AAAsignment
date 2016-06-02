@@ -1,7 +1,6 @@
+import javax.management.NotificationEmitter;
 import java.io.*;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Created by luxia on 2016/5/28.
@@ -9,21 +8,22 @@ import java.util.Random;
 public class MaxClique {
 	public static final int NodeCount = 4001;
 	public static final int BITMAPSIZE = NodeCount / 30 + 1;
-	public static final int ANTCOUNT = 100;
-	public static final int MAXTIME = 200;
+	public static final int ANTCOUNT = 10;
+	public static final int MAXTIME = 40000;
 	public static int MAXDEGREE = 0;
-	public static final int alpha = 1;
-	public static final int beta = 1;
+	public static final int alpha = 3;
+	public static final int beta = 2;
 	public static final double rou = 0.95;
 	public static final double MAX_PHEROMONE = 4;
 	public static final double MIN_PHEROMONE = 0.01;
 	public static final int Q = 100;
-	public static double q0 = 0.5;
+	public static double q0 = 0.8;
 	public static double[] pheromone = new double[NodeCount];
 	public static int[] degree = new int[NodeCount];
 	public static double[] p = new double[NodeCount];
 	public static double[] ita = new double[NodeCount];
 	public static int[][] neibor = new int[NodeCount][BITMAPSIZE];
+	public static double[] degreep = new double[NodeCount];
 
 	public static void main(String[] args) {
 		/////////////initialize/////////////////////
@@ -65,34 +65,40 @@ public class MaxClique {
 				MAXDEGREE = degree[i];
 			}
 		}
+		for (int i =0 ;i<NodeCount ; i++) {
+			degreep[i] = degree[i] / MAXDEGREE;
+		}
 
 		/////////////////////start////////////////////////
 		int time = 0;
 		do {
+			int antcount = ANTCOUNT;
+//			int antcount = time < (MAXTIME / 2) ? ANTCOUNT : ANTCOUNT * 5;
 			HashSet<Integer> CBetter = new HashSet<>();
-			for (int ant = 0; ant < ANTCOUNT; ant++) {   //for k in 1~n ants do:
+			for (int ant = 0; ant < antcount; ant++) {   //for k in 1~n ants do:
 				HashSet<Integer> CAnt = new HashSet<>();   //Antbest
 				Random rd = new Random();
 				int index = rd.nextInt(NodeCount);
 				int[] now = new int[BITMAPSIZE];
 				CAnt.add(index);
 				HashSet<Integer> Candidate;
+				for (int i =0 ; i<BITMAPSIZE;i++) {
+					now[i] = 0b111111_11111111_11111111_11111111;
+				}
 
 				do {
-					Candidate = new HashSet<>();
-					for (int i = 1; i < NodeCount; i++) {
-						if (CAnt.contains(i)) {
-							continue;
-						}
-						boolean include = true;
-						for (int j = 0; j < BITMAPSIZE; j++) {
-							if ((neibor[i][j] & now[j]) != now[j]) {
-								include = false;
-								break;
-							}
-						}
 
-						if (include) {
+					Candidate = new HashSet<>();
+					for (Integer hou : CAnt) {
+						int[] hounow = neibor[hou];
+						for (int i = 0;i< BITMAPSIZE;i++) {
+							now[i] = (hounow[i] & now[i]);
+						}
+					}
+					for (int i=1;i<NodeCount;i++){
+						int id = i /30;
+						int offest = i%30;
+						if ((now[id] & (1<<offest)) != 0) {
 							Candidate.add(i);
 						}
 					}
@@ -104,7 +110,7 @@ public class MaxClique {
 					double[] temp = new double[NodeCount];
 					for (Integer i : Candidate) {
 						ita[i] = Q * degree[i] / MAXDEGREE;
-						temp[i] = Math.pow(pheromone[i],alpha) * Math.pow(ita[i],beta);
+						temp[i] = Math.pow(pheromone[i], alpha) * Math.pow(ita[i], beta);
 						sump += temp[i];
 					}
 					for (Integer i : Candidate) {
@@ -139,36 +145,48 @@ public class MaxClique {
 					CAnt.add(pick);
 				} while (!Candidate.isEmpty());
 
-				if (CBetter.size() < CAnt.size()) {
+				if (CBetter.size() <= CAnt.size()) {
 					CBetter = CAnt;
 				}
 			}//End of for
 			/////////////Update-pheromone/////////////////
 
-			if (CBest.size() < CBetter.size()) {
+			if (CBest.size() <= CBetter.size()) {
 				CBest = CBetter;
 			}
 
+			double k = time < 200 ? 1.0 : 2.0;
 			for (int i = 0; i < NodeCount; i++) {
 				pheromone[i] *= rou;
 				if (CBetter.contains(i)) {
-					pheromone[i] += (1 / (1 + CBest.size() - CBetter.size()));
+					pheromone[i] += (k / (1 + CBest.size() - CBetter.size()));
 				}
 				pheromone[i] = pheromone[i] > MAX_PHEROMONE ? MAX_PHEROMONE :
 						pheromone[i] < MIN_PHEROMONE ? MIN_PHEROMONE :
 								pheromone[i];
 			}
 
-
 			System.out.println("Time" + (time + 1) + " : " + CBetter.size());
 			time++;
-			q0 = q0 - 0.4 * time / MAXTIME;
-
-			if (time == 50) {
-				System.out.println("Wait!");
-			}
+//			q0 = q0 - 0.4 * time / MAXTIME;
+			q0 = time < 400 ? 0.7 : 0.2;
+//			if (time == 50) {
+//				System.out.println("Wait!");
+//			}
 			///////////Next-generation///////////////////
 		} while (time < MAXTIME);
+		System.out.println("alpha = " + alpha + ", beta = " + beta + ", rou = " + rou);
+		System.out.println("找到的最大团应包含点的个数为： " + CBest.size());
+		System.out.print("包括如下点： ");
+		int count = 0;
+		for (Integer i : CBest) {
+			if (count == 20) {
+				count = 0;
+				System.out.println();
+			}
+			System.out.print(i+ " ");
+			count ++;
+		}
 
 	}
 }
